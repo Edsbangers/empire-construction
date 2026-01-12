@@ -33,8 +33,13 @@ import {
   X,
   Phone,
   Mail,
-  Calendar
+  Calendar,
+  Lock,
+  KeyRound
 } from "lucide-react";
+
+// Demo credentials - in production this would be handled by a proper auth system
+const DEMO_PASSWORD = "empire2024";
 
 interface NewsPost {
   id: string;
@@ -107,6 +112,12 @@ const enhanceText = (text: string): { enhanced: string; hashtags: string[] } => 
 };
 
 export default function AdminDashboard() {
+  // Auth state
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [password, setPassword] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
   const [activeTab, setActiveTab] = useState<"dashboard" | "news" | "chats" | "settings">("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -124,6 +135,37 @@ export default function AdminDashboard() {
   const [chatFilter, setChatFilter] = useState<"all" | "qualified" | "active">("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [replyInput, setReplyInput] = useState("");
+
+  // Check for existing auth session
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const authSession = sessionStorage.getItem('empireAdminAuth');
+      if (authSession === 'authenticated') {
+        setIsAuthenticated(true);
+      }
+      setIsCheckingAuth(false);
+    }
+  }, []);
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password === DEMO_PASSWORD) {
+      setIsAuthenticated(true);
+      setAuthError("");
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('empireAdminAuth', 'authenticated');
+      }
+    } else {
+      setAuthError("Invalid password. Please try again.");
+    }
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('empireAdminAuth');
+    }
+  };
 
   // Load conversations from localStorage
   useEffect(() => {
@@ -268,11 +310,18 @@ export default function AdminDashboard() {
         </nav>
 
         {/* Footer */}
-        <div className="p-4 border-t border-navy-400">
+        <div className="p-4 border-t border-navy-400 space-y-2">
           <Link href="/" className="flex items-center space-x-3 text-gray-400 hover:text-white px-4 py-3 rounded-lg hover:bg-navy-600 transition-colors">
-            <LogOut className="h-5 w-5" />
+            <Building2 className="h-5 w-5" />
             <span>Back to Site</span>
           </Link>
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center space-x-3 text-gray-400 hover:text-red-400 px-4 py-3 rounded-lg hover:bg-navy-600 transition-colors"
+          >
+            <LogOut className="h-5 w-5" />
+            <span>Sign Out</span>
+          </button>
         </div>
       </div>
     </aside>
@@ -809,6 +858,80 @@ export default function AdminDashboard() {
       </div>
     </div>
   );
+
+  // Loading state
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen bg-navy flex items-center justify-center">
+        <div className="text-center">
+          <div className="bg-gold p-4 rounded-full inline-block mb-4">
+            <Building2 className="h-12 w-12 text-navy animate-pulse" />
+          </div>
+          <p className="text-white">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Login screen
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-navy flex items-center justify-center px-4">
+        <div className="max-w-md w-full">
+          <div className="text-center mb-8">
+            <div className="bg-gold p-4 rounded-full inline-block mb-4">
+              <Building2 className="h-12 w-12 text-navy" />
+            </div>
+            <h1 className="text-3xl font-bold text-white">Empire Admin</h1>
+            <p className="text-gray-400 mt-2">Enter your password to access the admin portal</p>
+          </div>
+
+          <form onSubmit={handleLogin} className="bg-white rounded-2xl shadow-2xl p-8">
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-navy mb-2">
+                <Lock className="h-4 w-4 inline mr-2" />
+                Admin Password
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter password"
+                className="w-full border border-gray-200 rounded-lg px-4 py-3 text-lg focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent"
+                autoFocus
+              />
+              {authError && (
+                <p className="text-red-500 text-sm mt-2 flex items-center">
+                  <AlertCircle className="h-4 w-4 mr-1" />
+                  {authError}
+                </p>
+              )}
+            </div>
+
+            <button
+              type="submit"
+              className="w-full bg-gold hover:bg-gold-600 text-navy font-semibold py-3 rounded-lg transition-colors flex items-center justify-center"
+            >
+              <KeyRound className="h-5 w-5 mr-2" />
+              Sign In
+            </button>
+
+            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+              <p className="text-sm text-gray-600 text-center">
+                <strong>Demo Password:</strong> empire2024
+              </p>
+            </div>
+          </form>
+
+          <div className="text-center mt-6">
+            <Link href="/" className="text-gray-400 hover:text-gold transition-colors">
+              &larr; Back to website
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-100 pt-0">
